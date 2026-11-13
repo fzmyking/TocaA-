@@ -1,0 +1,2562 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TocaAí</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        accent: 'var(--color-accent)',
+                        'accent-hover': 'var(--color-accent-hover)',
+                        'dark-base': 'var(--color-bg-base)',
+                        'dark-surface': 'var(--color-bg-surface)',
+                        'dark-card': 'var(--color-bg-card)',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- jsmediatags para extrair capas e metadados de MP3 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+    <!-- Firebase Compat SDK (App & Realtime Database exclusivamente para Usuários e Playlists Públicas) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+    <style>
+        /* Variáveis de Tema Padrão */
+        :root {
+            --color-accent: #1db954;
+            --color-accent-hover: #1ed760;
+            --color-bg-base: #121212;
+            --color-bg-surface: #181818;
+            --color-bg-card: #282828;
+            --anim-speed: 1;
+        }
+
+        /* Temas Pré-definidos */
+        [data-theme="purple"] {
+            --color-accent: #a855f7;
+            --color-accent-hover: #c084fc;
+            --color-bg-base: #0f0b15;
+            --color-bg-surface: #171123;
+            --color-bg-card: #241b35;
+        }
+        [data-theme="cyberpunk"] {
+            --color-accent: #00f0ff;
+            --color-accent-hover: #70f8ff;
+            --color-bg-base: #09090e;
+            --color-bg-surface: #12131c;
+            --color-bg-card: #1c1e2e;
+        }
+        [data-theme="forest"] {
+            --color-accent: #10b981;
+            --color-accent-hover: #34d399;
+            --color-bg-base: #06140e;
+            --color-bg-surface: #0c2319;
+            --color-bg-card: #15382a;
+        }
+        [data-theme="sunset"] {
+            --color-accent: #f97316;
+            --color-accent-hover: #fb923c;
+            --color-bg-base: #180c0a;
+            --color-bg-surface: #261410;
+            --color-bg-card: #3a1e18;
+        }
+        [data-theme="rose"] {
+            --color-accent: #f43f5e;
+            --color-accent-hover: #fb7185;
+            --color-bg-base: #16090d;
+            --color-bg-surface: #220e15;
+            --color-bg-card: #351621;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.15);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.18);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--color-accent);
+        }
+
+        /* Input Range Custom Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #4d4d4d;
+            border-radius: 2px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -4px;
+            opacity: 0;
+            transition: opacity 0.15s ease, transform 0.15s ease;
+        }
+        .range-container:hover input[type=range]::-webkit-slider-thumb {
+            opacity: 1;
+        }
+        .range-container:hover input[type=range]::-webkit-slider-runnable-track {
+            background: var(--color-accent);
+        }
+
+        /* Animações Avançadas da Aba Inicial e UI */
+        @keyframes bounceEq {
+            0%, 100% { height: 4px; }
+            50% { height: 18px; }
+        }
+        .eq-bar {
+            animation: bounceEq 0.75s ease-in-out infinite;
+        }
+        .eq-bar:nth-child(1) { animation-delay: 0.0s; }
+        .eq-bar:nth-child(2) { animation-delay: 0.2s; }
+        .eq-bar:nth-child(3) { animation-delay: 0.35s; }
+        .eq-bar:nth-child(4) { animation-delay: 0.15s; }
+
+        @keyframes floatOrb {
+            0%, 100% { transform: translate(0px, 0px) scale(1); }
+            33% { transform: translate(24px, -18px) scale(1.08); }
+            66% { transform: translate(-18px, 14px) scale(0.95); }
+        }
+        .animate-orb-1 {
+            animation: floatOrb 11s ease-in-out infinite;
+        }
+        .animate-orb-2 {
+            animation: floatOrb 15s ease-in-out infinite reverse;
+        }
+
+        @keyframes spinVinyl {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .vinyl-spinning {
+            animation: spinVinyl 8s linear infinite;
+        }
+        .vinyl-paused {
+            animation: spinVinyl 8s linear infinite;
+            animation-play-state: paused;
+        }
+
+        @keyframes pulseRing {
+            0% { transform: scale(0.95); opacity: 0.65; }
+            70% { transform: scale(1.18); opacity: 0; }
+            100% { transform: scale(1.18); opacity: 0; }
+        }
+        .sonic-ring {
+            animation: pulseRing 2.2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(14px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes shimmerSlide {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        .hero-shimmer::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+            animation: shimmerSlide 5s infinite;
+            pointer-events: none;
+        }
+
+        /* Toggle Switch Custom */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: var(--color-accent);
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: var(--color-accent);
+        }
+    </style>
+</head>
+<body class="h-full bg-dark-base text-gray-100 font-sans select-none overflow-hidden flex flex-col">
+
+    <!-- ==========================================================================
+         TELA DE LOGIN / CADASTRO INTERNO (OVERLAY INICIAL)
+         ========================================================================== -->
+    <div id="auth-screen" class="fixed inset-0 z-50 bg-dark-base flex items-center justify-center p-4 overflow-y-auto">
+        <!-- Orbes decorativos animados de fundo -->
+        <div class="fixed inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-accent/20 blur-3xl animate-orb-1"></div>
+            <div class="absolute bottom-10 right-10 w-80 h-80 rounded-full bg-accent/15 blur-3xl animate-orb-2"></div>
+        </div>
+
+        <div class="relative w-full max-w-md bg-dark-surface/90 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 animate-fade-in-up">
+            <!-- Branding TocaAí -->
+            <div class="flex flex-col items-center text-center space-y-2">
+                <div class="w-14 h-14 rounded-2xl bg-accent flex items-center justify-center text-black shadow-lg shadow-accent/30 transform hover:scale-105 transition-transform">
+                    <i data-lucide="music-4" class="w-8 h-8 stroke-[2.5]"></i>
+                </div>
+                <h1 class="text-2xl font-extrabold tracking-tight text-white">TocaAí</h1>
+                <p id="auth-subtitle" class="text-xs text-gray-400">Entre com sua conta interna para sincronizar seu perfil e explorar playlists públicas</p>
+            </div>
+
+            <!-- Abas Entrar / Criar Conta -->
+            <div class="grid grid-cols-2 gap-1 p-1 bg-white/5 rounded-xl border border-white/5">
+                <button type="button" id="tab-btn-login" onclick="switchAuthMode('login')" class="py-2 rounded-lg text-sm font-bold bg-accent text-black transition-all">
+                    Entrar
+                </button>
+                <button type="button" id="tab-btn-register" onclick="switchAuthMode('register')" class="py-2 rounded-lg text-sm font-semibold text-gray-400 hover:text-white transition-all">
+                    Criar Conta
+                </button>
+            </div>
+
+            <!-- Formulário de Login / Cadastro -->
+            <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+                <!-- Upload de Foto de Perfil (Apenas no Cadastro) -->
+                <div id="register-avatar-section" class="hidden flex flex-col items-center space-y-2 pt-1">
+                    <label for="register-avatar-input" class="relative group cursor-pointer">
+                        <div class="w-20 h-20 rounded-full bg-white/5 border-2 border-dashed border-accent/60 flex items-center justify-center overflow-hidden group-hover:border-accent transition-colors">
+                            <img id="register-avatar-preview" src="" alt="Preview" class="w-full h-full object-cover hidden">
+                            <div id="register-avatar-placeholder" class="flex flex-col items-center text-gray-400 group-hover:text-accent">
+                                <i data-lucide="camera" class="w-6 h-6"></i>
+                                <span class="text-[10px] mt-1 font-medium">Foto</span>
+                            </div>
+                        </div>
+                        <span class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-accent text-black flex items-center justify-center shadow-md">
+                            <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                        </span>
+                    </label>
+                    <input type="file" id="register-avatar-input" accept="image/*" class="hidden" onchange="handleAvatarUpload(event, 'register')">
+                    <span class="text-[11px] text-gray-400">Clique para enviar uma foto do dispositivo</span>
+                </div>
+
+                <!-- Nome de Exibição (Apenas no Cadastro) -->
+                <div id="register-displayname-group" class="hidden space-y-1">
+                    <label class="text-xs font-semibold text-gray-300">Nome de Exibição</label>
+                    <div class="relative">
+                        <i data-lucide="smile" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="auth-displayname" placeholder="Como quer ser chamado?" class="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-accent transition-colors">
+                    </div>
+                </div>
+
+                <!-- Nome de Usuário Único -->
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-gray-300">Usuário único</label>
+                    <div class="relative">
+                        <i data-lucide="at-sign" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="auth-username" required autocomplete="username" placeholder="ex: joaosilva" class="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-accent transition-colors">
+                    </div>
+                </div>
+
+                <!-- Senha -->
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-gray-300">Senha</label>
+                    <div class="relative">
+                        <i data-lucide="lock" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="password" id="auth-password" required autocomplete="current-password" placeholder="••••••••" class="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-accent transition-colors">
+                    </div>
+                </div>
+
+                <!-- Bio inicial (Apenas no Cadastro) -->
+                <div id="register-bio-group" class="hidden space-y-1">
+                    <label class="text-xs font-semibold text-gray-300">Status / Vibe Musical (opcional)</label>
+                    <input type="text" id="auth-bio" placeholder="Ex: Curtindo Lo-Fi e Rock Clássico 🎧" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-accent transition-colors">
+                </div>
+
+                <div id="auth-error-msg" class="hidden text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-center"></div>
+
+                <button type="submit" id="auth-submit-btn" class="w-full py-3 rounded-xl bg-accent text-black font-bold text-sm hover:bg-accent-hover hover:scale-[1.01] active:scale-[0.99] transition-all shadow-lg shadow-accent/20 flex items-center justify-center gap-2">
+                    <i data-lucide="log-in" class="w-4 h-4"></i> Entrar no TocaAí
+                </button>
+            </form>
+
+            <div class="pt-2 border-t border-white/10 flex flex-col items-center gap-2">
+                <button type="button" onclick="continueAsGuest()" class="text-xs text-gray-400 hover:text-accent transition-colors font-medium">
+                    Continuar no modo offline (Convidado)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         CONTAINER PRINCIPAL DO APP
+         ========================================================================== -->
+    <div id="app-shell" class="flex-1 flex overflow-hidden p-2 gap-2">
+
+        <!-- Sidebar / Barra Lateral -->
+        <aside class="w-20 md:w-64 bg-dark-surface rounded-xl flex flex-col justify-between p-3 md:p-4 flex-shrink-0 z-10 transition-all duration-300">
+            <div class="space-y-6">
+                <!-- Logo & Branding (TocaAí sem subtítulo VIP) -->
+                <div class="flex items-center justify-center md:justify-start gap-3 px-1 md:px-2">
+                    <div class="w-10 h-10 rounded-xl bg-accent flex items-center justify-center text-black font-bold text-xl shadow-lg shadow-accent/25 flex-shrink-0">
+                        <i data-lucide="music-4" class="w-6 h-6 stroke-[2.5]"></i>
+                    </div>
+                    <div class="hidden md:block">
+                        <h1 class="font-extrabold text-xl leading-none tracking-tight text-white">TocaAí</h1>
+                    </div>
+                </div>
+
+                <!-- Menu de Navegação Principal -->
+                <nav class="space-y-1">
+                    <button onclick="switchTab('home')" id="nav-home" class="nav-item w-full flex items-center justify-center md:justify-start gap-4 px-3 py-2.5 rounded-lg text-sm font-semibold text-white bg-white/10 transition-all">
+                        <i data-lucide="home" class="w-5 h-5 text-accent flex-shrink-0"></i>
+                        <span class="hidden md:inline">Início</span>
+                    </button>
+                    <button onclick="switchTab('library')" id="nav-library" class="nav-item w-full flex items-center justify-center md:justify-start gap-4 px-3 py-2.5 rounded-lg text-sm font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+                        <i data-lucide="library" class="w-5 h-5 flex-shrink-0"></i>
+                        <span class="hidden md:inline">Minha Biblioteca</span>
+                    </button>
+                    <button onclick="switchTab('playlists')" id="nav-playlists" class="nav-item w-full flex items-center justify-center md:justify-start gap-4 px-3 py-2.5 rounded-lg text-sm font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+                        <i data-lucide="list-music" class="w-5 h-5 flex-shrink-0"></i>
+                        <span class="hidden md:inline">Playlists</span>
+                    </button>
+                    <button onclick="switchTab('explore')" id="nav-explore" class="nav-item w-full flex items-center justify-center md:justify-start gap-4 px-3 py-2.5 rounded-lg text-sm font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+                        <i data-lucide="globe" class="w-5 h-5 flex-shrink-0"></i>
+                        <span class="hidden md:inline">Explorar</span>
+                    </button>
+                </nav>
+
+                <hr class="border-white/10 my-3">
+
+                <!-- Botão de Upload & Criar Playlist -->
+                <div class="space-y-2">
+                    <label class="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-accent text-black font-bold text-sm cursor-pointer hover:bg-accent-hover hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md shadow-accent/20" title="Adicionar Músicas">
+                        <i data-lucide="folder-plus" class="w-4 h-4 flex-shrink-0"></i>
+                        <span class="hidden md:inline">Adicionar Músicas</span>
+                        <input type="file" id="file-input" multiple accept="audio/*" class="hidden" onchange="handleFileSelect(event)">
+                    </label>
+                    <button onclick="openCreatePlaylistModal()" class="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-white/5 text-white font-semibold text-sm hover:bg-white/10 transition-colors border border-white/10" title="Nova Playlist">
+                        <i data-lucide="plus" class="w-4 h-4 text-accent flex-shrink-0"></i>
+                        <span class="hidden md:inline">Nova Playlist</span>
+                    </button>
+                </div>
+
+                <!-- Lista de Playlists Rápidas -->
+                <div class="mt-4 hidden md:block">
+                    <span class="px-2 text-xs font-semibold text-gray-400 tracking-wider uppercase">Sua Coleção</span>
+                    <div id="sidebar-playlists-list" class="mt-2 space-y-1 max-h-44 overflow-y-auto pr-1">
+                        <!-- Playlists inseridas via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botões Inferiores da Sidebar -->
+            <div class="space-y-1 mt-auto">
+                <button onclick="toggleThemePanel()" class="w-full flex items-center justify-center md:justify-start gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors" title="Personalizar App">
+                    <i data-lucide="palette" class="w-5 h-5 text-accent flex-shrink-0"></i>
+                    <span class="hidden md:inline">Personalizar App</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Área de Conteúdo Principal (Dynamic View Container) -->
+        <main class="flex-1 bg-dark-surface rounded-xl flex flex-col overflow-hidden relative">
+            
+            <!-- Header Superior com Busca e Perfil do Usuário -->
+            <header class="h-16 px-4 md:px-6 flex items-center justify-between border-b border-white/5 bg-dark-surface/80 backdrop-blur-md z-10 gap-3">
+                <div class="flex items-center gap-4 flex-1 max-w-md">
+                    <div class="relative w-full">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="search-input" placeholder="Buscar música, artista ou álbum..." oninput="handleSearch(this.value)" class="w-full bg-white/5 text-sm text-white placeholder-gray-400 rounded-full pl-9 pr-4 py-2 border border-white/5 focus:outline-none focus:border-accent transition-colors">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <span id="music-counter-badge" class="hidden sm:inline-block text-xs bg-white/10 text-gray-300 px-3 py-1 rounded-full font-medium">0 músicas</span>
+                    
+                    <!-- Botão de Perfil do Usuário Logado -->
+                    <button onclick="openProfileModal()" id="header-profile-btn" class="flex items-center gap-2.5 pl-1.5 pr-3 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all group">
+                        <div class="w-8 h-8 rounded-full bg-accent/20 border border-accent/50 overflow-hidden flex items-center justify-center text-accent">
+                            <img id="header-avatar-img" src="" alt="Avatar" class="w-full h-full object-cover hidden">
+                            <i id="header-avatar-icon" data-lucide="user" class="w-4 h-4"></i>
+                        </div>
+                        <div class="text-left hidden sm:block">
+                            <div id="header-display-name" class="text-xs font-bold text-white leading-tight max-w-[110px] truncate">Convidado</div>
+                            <div id="header-username" class="text-[10px] text-gray-400 leading-tight">@offline</div>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-400 group-hover:text-white transition-colors"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Conteúdo com Scroll -->
+            <div id="content-area" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-8">
+
+                <!-- ==============================================================
+                     ABA: INÍCIO (HOME) COM ANIMAÇÕES APRIMORADAS
+                     ============================================================== -->
+                <div id="tab-home" class="tab-content space-y-8 animate-fade-in-up">
+                    <!-- Banner Principal Hero com Orbes Animados & Shimmer -->
+                    <div class="relative rounded-2xl overflow-hidden p-6 md:p-8 bg-gradient-to-br from-accent/25 via-dark-card to-dark-surface border border-white/10 flex flex-col md:flex-row items-center justify-between gap-6 hero-shimmer shadow-xl">
+                        <!-- Orbes flutuantes internos -->
+                        <div class="absolute -top-12 -right-12 w-56 h-56 rounded-full bg-accent/20 blur-2xl animate-orb-1 pointer-events-none"></div>
+                        <div class="absolute -bottom-16 left-1/3 w-48 h-48 rounded-full bg-accent/10 blur-2xl animate-orb-2 pointer-events-none"></div>
+
+                        <div class="space-y-3 max-w-lg z-10">
+                            <div class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-accent bg-accent/10 px-3 py-1 rounded-full border border-accent/25">
+                                <span class="w-2 h-2 rounded-full bg-accent animate-ping"></span>
+                                <span id="home-welcome-badge">Bem-vindo ao TocaAí</span>
+                            </div>
+                            <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+                                Suas músicas salvas no dispositivo, suas playlists na comunidade.
+                            </h2>
+                            <p class="text-sm text-gray-300">
+                                Importe faixas localmente com salvamento automático, personalize as cores do seu jeito e compartilhe playlists públicas.
+                            </p>
+                            <div class="flex flex-wrap items-center gap-3 pt-1">
+                                <button onclick="document.getElementById('file-input').click()" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-accent text-black font-bold text-sm hover:bg-accent-hover hover:scale-105 active:scale-95 transition-all shadow-lg shadow-accent/25">
+                                    <i data-lucide="upload" class="w-4 h-4"></i> Importar Áudios
+                                </button>
+                                <button onclick="switchTab('explore')" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/10 text-white font-semibold text-sm hover:bg-white/15 transition-all border border-white/10">
+                                    <i data-lucide="globe" class="w-4 h-4 text-accent"></i> Explorar Comunidade
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Canvas Visualizador de Espectro & Ondas Duplas -->
+                        <div class="w-full md:w-72 h-36 z-10 bg-black/20 rounded-xl border border-white/5 p-2 backdrop-blur-sm">
+                            <canvas id="hero-visualizer" class="w-full h-full"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Seção: Tocando Agora Card com Disco de Vinil Animado -->
+                    <section class="animate-fade-in-up" style="animation-delay: 0.08s;">
+                        <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                            <i data-lucide="sparkles" class="w-5 h-5 text-accent"></i> Tocando Agora
+                        </h3>
+                        <div id="now-playing-hero-card" class="relative overflow-hidden bg-dark-card rounded-2xl p-5 border border-white/10 flex flex-col sm:flex-row items-center gap-6 shadow-lg transition-all duration-300 hover:border-accent/40">
+                            <!-- Disco / Capa com Anel de Pulso Sonoro -->
+                            <div class="relative w-32 h-32 flex-shrink-0 flex items-center justify-center">
+                                <div id="hero-sonic-ring" class="hidden absolute inset-0 rounded-full border-2 border-accent sonic-ring"></div>
+                                <div id="hero-vinyl-wrapper" class="w-32 h-32 rounded-full bg-white/5 overflow-hidden relative shadow-xl border-4 border-white/10 vinyl-paused">
+                                    <img id="hero-cover-img" src="" alt="Capa" class="w-full h-full object-cover hidden">
+                                    <div id="hero-cover-placeholder" class="w-full h-full flex items-center justify-center bg-gradient-to-tr from-accent/20 to-black text-accent">
+                                        <i data-lucide="disc" class="w-12 h-12"></i>
+                                    </div>
+                                    <!-- Centro do Vinil -->
+                                    <div class="absolute inset-0 m-auto w-6 h-6 rounded-full bg-dark-base border-2 border-white/30"></div>
+                                </div>
+                            </div>
+
+                            <div class="flex-1 text-center sm:text-left space-y-2 z-10">
+                                <span id="hero-playing-status" class="text-[11px] font-bold uppercase tracking-widest text-accent">Pronto para tocar</span>
+                                <h4 id="hero-track-title" class="text-xl sm:text-2xl font-extrabold text-white line-clamp-1">Nenhuma música selecionada</h4>
+                                <p id="hero-track-artist" class="text-sm text-gray-400">Selecione uma música da sua biblioteca para reproduzir</p>
+                                <div class="pt-2 flex items-center justify-center sm:justify-start gap-3">
+                                    <button onclick="togglePlay()" id="hero-play-btn" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-accent text-black font-bold text-sm hover:scale-105 active:scale-95 transition-all shadow-md shadow-accent/20">
+                                        <i data-lucide="play" class="w-4 h-4 fill-current"></i> Reproduzir
+                                    </button>
+                                    <button onclick="playNextTrack()" class="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors border border-white/10" title="Próxima faixa">
+                                        <i data-lucide="skip-forward" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Seção: Músicas Adicionadas Recentes -->
+                    <section class="animate-fade-in-up" style="animation-delay: 0.16s;">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                                <i data-lucide="clock" class="w-5 h-5 text-accent"></i> Salvas no Seu Dispositivo
+                            </h3>
+                            <button onclick="switchTab('library')" class="text-xs font-semibold text-accent hover:underline">Ver todas</button>
+                        </div>
+                        <div id="recent-tracks-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            <!-- Cards de música via JS -->
+                        </div>
+                    </section>
+                </div>
+
+                <!-- ==============================================================
+                     ABA: BIBLIOTECA (TODAS AS MÚSICAS SALVAS NO INDEXEDDB)
+                     ============================================================== -->
+                <div id="tab-library" class="tab-content space-y-6 hidden animate-fade-in-up">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-white">Minha Biblioteca</h2>
+                            <p class="text-sm text-gray-400">Suas faixas salvas localmente no navegador (persistem ao recarregar)</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="playAllTracks()" class="flex items-center gap-2 px-4 py-2 rounded-full bg-accent text-black font-bold text-sm hover:bg-accent-hover transition-all shadow-md">
+                                <i data-lucide="play" class="w-4 h-4 fill-current"></i> Tocar Todas
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabela Estilo Streaming -->
+                    <div class="w-full text-left border-collapse">
+                        <div class="grid grid-cols-12 text-xs font-semibold text-gray-400 uppercase border-b border-white/10 px-4 py-2 mb-2">
+                            <div class="col-span-1">#</div>
+                            <div class="col-span-6 md:col-span-5">Título</div>
+                            <div class="hidden md:block md:col-span-4">Álbum / Artista</div>
+                            <div class="col-span-5 md:col-span-2 text-right">Ações</div>
+                        </div>
+                        <div id="library-tracks-list" class="space-y-1">
+                            <!-- Linhas de músicas preenchidas via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==============================================================
+                     ABA: PLAYLISTS DO USUÁRIO (PRIVADAS & PÚBLICAS)
+                     ============================================================== -->
+                <div id="tab-playlists" class="tab-content space-y-6 hidden animate-fade-in-up">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-white">Suas Playlists</h2>
+                            <p class="text-sm text-gray-400">Crie listas privadas ou publique para toda a comunidade TocaAí</p>
+                        </div>
+                        <button onclick="openCreatePlaylistModal()" class="flex items-center gap-2 px-4 py-2 rounded-full bg-accent text-black font-bold text-sm hover:bg-accent-hover transition-all">
+                            <i data-lucide="plus" class="w-4 h-4"></i> Criar Playlist
+                        </button>
+                    </div>
+
+                    <!-- Grid de Playlists -->
+                    <div id="playlists-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        <!-- Playlists injetadas pelo JS -->
+                    </div>
+                </div>
+
+                <!-- ==============================================================
+                     ABA: EXPLORAR (PLAYLISTS PÚBLICAS DA COMUNIDADE VIA FIREBASE)
+                     ============================================================== -->
+                <div id="tab-explore" class="tab-content space-y-6 hidden animate-fade-in-up">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h2 class="text-2xl font-bold text-white">Explorar Comunidade</h2>
+                                <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-accent/20 text-accent border border-accent/30">Ao Vivo</span>
+                            </div>
+                            <p class="text-sm text-gray-400">Descubra playlists públicas criadas por outros usuários do TocaAí</p>
+                        </div>
+                        <button onclick="fetchPublicPlaylists()" class="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 text-white font-semibold text-xs border border-white/10 transition-all">
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-accent"></i> Atualizar Feed
+                        </button>
+                    </div>
+
+                    <div id="public-playlists-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        <!-- Playlists públicas carregadas do Firebase -->
+                    </div>
+                </div>
+
+                <!-- ==============================================================
+                     ABA: DETALHES DA PLAYLIST
+                     ============================================================== -->
+                <div id="tab-playlist-detail" class="tab-content space-y-6 hidden animate-fade-in-up">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-end gap-6 pb-4 border-b border-white/10">
+                        <div class="w-32 h-32 sm:w-36 sm:h-36 rounded-2xl bg-accent/20 border border-accent/30 flex items-center justify-center text-accent shadow-xl flex-shrink-0">
+                            <i data-lucide="list-music" class="w-16 h-16"></i>
+                        </div>
+                        <div class="space-y-2 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold uppercase tracking-wider text-accent">PLAYLIST</span>
+                                <span id="playlist-detail-visibility-badge" class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-white/10 text-gray-300">Privada</span>
+                            </div>
+                            <h2 id="playlist-detail-name" class="text-3xl sm:text-4xl font-extrabold text-white">Nome da Playlist</h2>
+                            <p id="playlist-detail-count" class="text-sm text-gray-400">0 músicas</p>
+                            <div class="flex flex-wrap items-center gap-3 pt-2">
+                                <button id="play-playlist-btn" onclick="" class="flex items-center gap-2 px-5 py-2.5 rounded-full bg-accent text-black font-bold text-sm hover:scale-105 transition-all">
+                                    <i data-lucide="play" class="w-4 h-4 fill-current"></i> Reproduzir
+                                </button>
+                                <button id="toggle-public-playlist-btn" onclick="" class="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/5 hover:bg-white/10 text-white font-semibold text-xs border border-white/10 transition-colors">
+                                    <i data-lucide="globe" class="w-4 h-4 text-accent"></i> <span>Tornar Pública</span>
+                                </button>
+                                <button id="delete-playlist-btn" onclick="" class="p-2.5 rounded-full bg-white/5 hover:bg-red-500/20 text-gray-300 hover:text-red-400 transition-colors border border-white/10" title="Excluir Playlist">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Músicas da Playlist -->
+                    <div id="playlist-tracks-list" class="space-y-1">
+                        <!-- Lista de músicas injetada via JS -->
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- ==========================================================================
+         PLAYER FIXO INFERIOR (CONTROLES DE ÁUDIO)
+         ========================================================================== -->
+    <footer class="h-24 bg-dark-base border-t border-white/10 px-4 md:px-6 flex items-center justify-between z-20">
+        
+        <!-- Faixa Atual (Esquerda) -->
+        <div class="flex items-center gap-3 md:gap-4 w-1/4 min-w-[140px] md:min-w-[200px]">
+            <div class="w-12 h-12 md:w-14 md:h-14 rounded-lg bg-white/5 flex-shrink-0 overflow-hidden relative border border-white/10">
+                <img id="player-cover-img" src="" class="w-full h-full object-cover hidden">
+                <div id="player-cover-placeholder" class="w-full h-full flex items-center justify-center text-gray-500 bg-white/5">
+                    <i data-lucide="music" class="w-6 h-6"></i>
+                </div>
+            </div>
+            <div class="overflow-hidden">
+                <h4 id="player-title" class="text-xs md:text-sm font-semibold text-white truncate">Nenhuma música</h4>
+                <p id="player-artist" class="text-[11px] md:text-xs text-gray-400 truncate">TocaAí Player</p>
+            </div>
+        </div>
+
+        <!-- Controles Centrais do Player -->
+        <div class="flex flex-col items-center gap-1.5 w-2/4 max-w-xl">
+            <div class="flex items-center gap-3 md:gap-4">
+                <button id="btn-shuffle" onclick="toggleShuffle()" class="text-gray-400 hover:text-white transition-colors" title="Modo Aleatório">
+                    <i data-lucide="shuffle" class="w-4 h-4"></i>
+                </button>
+                <button onclick="playPrevTrack()" class="text-gray-300 hover:text-white transition-colors">
+                    <i data-lucide="skip-back" class="w-5 h-5"></i>
+                </button>
+                <button id="btn-play-pause" onclick="togglePlay()" class="w-10 h-10 rounded-full bg-accent text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md shadow-accent/20">
+                    <i data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
+                </button>
+                <button onclick="playNextTrack()" class="text-gray-300 hover:text-white transition-colors">
+                    <i data-lucide="skip-forward" class="w-5 h-5"></i>
+                </button>
+                <button id="btn-repeat" onclick="toggleRepeat()" class="text-gray-400 hover:text-white transition-colors" title="Repetir">
+                    <i data-lucide="repeat" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full flex items-center gap-2 range-container">
+                <span id="current-time" class="text-[11px] text-gray-400 font-mono w-9 text-right">0:00</span>
+                <input type="range" id="progress-bar" min="0" max="100" value="0" oninput="seekTrack(this.value)" class="flex-1 h-1">
+                <span id="total-duration" class="text-[11px] text-gray-400 font-mono w-9">0:00</span>
+            </div>
+        </div>
+
+        <!-- Opções Direita (Volume & Visualizer Mini) -->
+        <div class="flex items-center justify-end gap-2 md:gap-3 w-1/4 min-w-[100px] md:min-w-[180px]">
+            <div id="playing-eq" class="hidden items-end gap-1 h-4 mr-1">
+                <div class="w-1 bg-accent rounded-full eq-bar"></div>
+                <div class="w-1 bg-accent rounded-full eq-bar"></div>
+                <div class="w-1 bg-accent rounded-full eq-bar"></div>
+                <div class="w-1 bg-accent rounded-full eq-bar"></div>
+            </div>
+
+            <button onclick="toggleMute()" class="text-gray-400 hover:text-white transition-colors">
+                <i id="volume-icon" data-lucide="volume-2" class="w-5 h-5"></i>
+            </button>
+            <div class="w-16 md:w-24 range-container hidden sm:block">
+                <input type="range" id="volume-bar" min="0" max="1" step="0.01" value="0.8" oninput="changeVolume(this.value)" class="w-full h-1">
+            </div>
+        </div>
+    </footer>
+
+    <!-- ==========================================================================
+         PAINEL LATERAL DE PERSONALIZAÇÃO (DRAWER COM SALVAMENTO AUTOMÁTICO)
+         ========================================================================== -->
+    <div id="theme-panel" class="fixed inset-y-0 right-0 w-80 bg-dark-surface/95 backdrop-blur-xl border-l border-white/10 shadow-2xl z-40 transform translate-x-full transition-transform duration-300 p-6 flex flex-col justify-between overflow-y-auto">
+        <div class="space-y-6">
+            <div class="flex items-center justify-between pb-4 border-b border-white/10">
+                <h3 class="font-bold text-lg text-white flex items-center gap-2">
+                    <i data-lucide="palette" class="w-5 h-5 text-accent"></i> Personalização
+                </h3>
+                <button onclick="toggleThemePanel()" class="text-gray-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Temas Prontos -->
+            <div class="space-y-2.5">
+                <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Temas Visuais</label>
+                <div class="grid grid-cols-1 gap-2">
+                    <button onclick="setTheme('default')" class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-sm font-medium transition-colors">
+                        <span class="flex items-center gap-2.5"><span class="w-3.5 h-3.5 rounded-full bg-[#1db954]"></span> Verde Clássico</span>
+                    </button>
+                    <button onclick="setTheme('purple')" class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-sm font-medium transition-colors">
+                        <span class="flex items-center gap-2.5"><span class="w-3.5 h-3.5 rounded-full bg-[#a855f7]"></span> Midnight Purple</span>
+                    </button>
+                    <button onclick="setTheme('cyberpunk')" class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-sm font-medium transition-colors">
+                        <span class="flex items-center gap-2.5"><span class="w-3.5 h-3.5 rounded-full bg-[#00f0ff]"></span> Cyberpunk Neon</span>
+                    </button>
+                    <button onclick="setTheme('forest')" class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-sm font-medium transition-colors">
+                        <span class="flex items-center gap-2.5"><span class="w-3.5 h-3.5 rounded-full bg-[#10b981]"></span> Forest Green</span>
+                    </button>
+                    <button onclick="setTheme('sunset')" class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-sm font-medium transition-colors">
+                        <span class="flex items-center gap-2.5"><span class="w-3.5 h-3.5 rounded-full bg-[#f97316]"></span> Sunset Orange</span>
+                    </button>
+                    <button onclick="setTheme('rose')" class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-sm font-medium transition-colors">
+                        <span class="flex items-center gap-2.5"><span class="w-3.5 h-3.5 rounded-full bg-[#f43f5e]"></span> Rose Velvet</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Seletor de Cor Customizada -->
+            <div class="space-y-2.5">
+                <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Cor de Destaque Livre</label>
+                <div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
+                    <div class="flex items-center gap-3">
+                        <input type="color" id="accent-color-picker" value="#1db954" onchange="setCustomAccent(this.value)" class="w-8 h-8 rounded border-0 cursor-pointer bg-transparent">
+                        <span class="text-sm font-mono text-gray-300" id="color-hex-code">#1db954</span>
+                    </div>
+                    <button onclick="resetCustomColors()" class="text-xs text-gray-400 hover:text-white underline">Resetar</button>
+                </div>
+            </div>
+
+            <!-- Cor de Fundo Customizada -->
+            <div class="space-y-2.5">
+                <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Cor de Fundo Principal</label>
+                <div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
+                    <div class="flex items-center gap-3">
+                        <input type="color" id="bg-color-picker" value="#121212" onchange="setCustomBgColor(this.value)" class="w-8 h-8 rounded border-0 cursor-pointer bg-transparent">
+                        <span class="text-sm font-mono text-gray-300" id="bg-hex-code">#121212</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pt-4 border-t border-white/10 text-xs text-gray-400 text-center flex items-center justify-center gap-1.5">
+            <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-accent"></i>
+            <span>Edições salvas automaticamente</span>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         MODAL COMPLETO DE PERFIL DO USUÁRIO
+         ========================================================================== -->
+    <div id="profile-modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-dark-card border border-white/10 w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto animate-fade-in-up">
+            <div class="flex items-center justify-between pb-3 border-b border-white/10">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="user-cog" class="w-5 h-5 text-accent"></i> Perfil do Usuário
+                </h3>
+                <button onclick="closeProfileModal()" class="text-gray-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Caso seja Convidado -->
+            <div id="profile-guest-view" class="hidden text-center py-6 space-y-4">
+                <div class="w-16 h-16 rounded-full bg-white/5 mx-auto flex items-center justify-center text-gray-400">
+                    <i data-lucide="user-x" class="w-8 h-8"></i>
+                </div>
+                <div>
+                    <h4 class="text-base font-bold text-white">Você está no Modo Offline</h4>
+                    <p class="text-xs text-gray-400 mt-1">Crie uma conta interna para ter foto de perfil, senha e publicar playlists na comunidade.</p>
+                </div>
+                <button onclick="logoutUser()" class="px-6 py-2.5 rounded-full bg-accent text-black font-bold text-sm hover:bg-accent-hover transition-all">
+                    Fazer Login / Criar Conta
+                </button>
+            </div>
+
+            <!-- Caso esteja Logado -->
+            <form id="profile-edit-form" onsubmit="saveUserProfile(event)" class="space-y-4">
+                <!-- Upload de Nova Foto de Perfil -->
+                <div class="flex flex-col items-center space-y-2">
+                    <label for="profile-avatar-input" class="relative group cursor-pointer">
+                        <div class="w-24 h-24 rounded-full bg-white/5 border-2 border-accent overflow-hidden flex items-center justify-center shadow-lg">
+                            <img id="profile-avatar-preview" src="" alt="Avatar" class="w-full h-full object-cover hidden">
+                            <i id="profile-avatar-icon" data-lucide="user" class="w-10 h-10 text-accent"></i>
+                        </div>
+                        <span class="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-accent text-black flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                            <i data-lucide="camera" class="w-4 h-4"></i>
+                        </span>
+                    </label>
+                    <input type="file" id="profile-avatar-input" accept="image/*" class="hidden" onchange="handleAvatarUpload(event, 'profile')">
+                    <span id="profile-username-badge" class="text-xs font-mono text-accent bg-accent/10 px-3 py-0.5 rounded-full">@usuario</span>
+                </div>
+
+                <!-- Estatísticas Rápidas -->
+                <div class="grid grid-cols-3 gap-2 text-center bg-white/5 p-3 rounded-2xl border border-white/5">
+                    <div>
+                        <div id="stat-local-tracks" class="text-lg font-extrabold text-white">0</div>
+                        <div class="text-[10px] text-gray-400 uppercase">Músicas Locais</div>
+                    </div>
+                    <div>
+                        <div id="stat-total-playlists" class="text-lg font-extrabold text-white">0</div>
+                        <div class="text-[10px] text-gray-400 uppercase">Playlists</div>
+                    </div>
+                    <div>
+                        <div id="stat-public-playlists" class="text-lg font-extrabold text-accent">0</div>
+                        <div class="text-[10px] text-gray-400 uppercase">Públicas</div>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-gray-300">Nome de Exibição</label>
+                    <input type="text" id="profile-displayname" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-accent">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-gray-300">Bio / Status Musical</label>
+                    <input type="text" id="profile-bio" placeholder="Sua frase musical..." class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-accent">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-gray-300">Alterar Senha (deixe em branco para manter)</label>
+                    <input type="password" id="profile-new-password" placeholder="Nova senha..." class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-accent">
+                </div>
+
+                <div class="flex items-center justify-between pt-3 border-t border-white/10 gap-3">
+                    <button type="button" onclick="logoutUser()" class="px-4 py-2.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-400 text-xs font-bold flex items-center gap-1.5 transition-colors">
+                        <i data-lucide="log-out" class="w-4 h-4"></i> Sair da Conta
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-accent text-black text-xs font-bold hover:bg-accent-hover transition-colors flex items-center gap-1.5">
+                        <i data-lucide="save" class="w-4 h-4"></i> Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         MODAL DE CRIAÇÃO DE PLAYLIST (COM OPÇÃO PÚBLICA / PRIVADA)
+         ========================================================================== -->
+    <div id="create-playlist-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-dark-card border border-white/10 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-5 animate-fade-in-up">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-white">Nova Playlist</h3>
+                <button onclick="closeCreatePlaylistModal()" class="text-gray-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-gray-300">Nome da Playlist</label>
+                    <input type="text" id="new-playlist-name" placeholder="Ex: Treino Pesado, Chill Night..." class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-accent">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-gray-300">Descrição (opcional)</label>
+                    <input type="text" id="new-playlist-desc" placeholder="Sobre o que é essa seleção?" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-accent">
+                </div>
+
+                <!-- Toggle Playlist Pública -->
+                <div class="flex items-center justify-between p-3.5 rounded-xl bg-white/5 border border-white/10">
+                    <div class="space-y-0.5 pr-3">
+                        <div class="text-sm font-semibold text-white flex items-center gap-1.5">
+                            <i data-lucide="globe" class="w-4 h-4 text-accent"></i> Playlist Pública
+                        </div>
+                        <p class="text-[11px] text-gray-400">Compartilhar na aba Explorar para outros usuários verem e curtirem</p>
+                    </div>
+                    <input type="checkbox" id="new-playlist-public" class="w-5 h-5 accent-[var(--color-accent)] cursor-pointer rounded">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button onclick="closeCreatePlaylistModal()" class="px-4 py-2 rounded-xl bg-white/5 text-sm font-semibold text-gray-300 hover:bg-white/10 transition-colors">
+                    Cancelar
+                </button>
+                <button onclick="confirmCreatePlaylist()" class="px-5 py-2 rounded-xl bg-accent text-black text-sm font-bold hover:bg-accent-hover transition-colors">
+                    Criar Playlist
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL GENÉRICO DE CONFIRMAÇÃO -->
+    <div id="custom-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-dark-card border border-white/10 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-5 transform scale-95 transition-transform duration-200">
+            <h3 id="modal-title" class="text-lg font-bold text-white">Confirmação</h3>
+            <p id="modal-description" class="text-sm text-gray-300">Descrição</p>
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button id="modal-cancel-btn" onclick="closeModal()" class="px-4 py-2 rounded-lg bg-white/5 text-sm font-semibold text-gray-300 hover:bg-white/10 transition-colors">
+                    Cancelar
+                </button>
+                <button id="modal-confirm-btn" class="px-4 py-2 rounded-lg bg-accent text-black text-sm font-bold hover:bg-accent-hover transition-colors">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE SELEÇÃO DE PLAYLIST -->
+    <div id="add-to-playlist-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-dark-card border border-white/10 w-full max-w-sm rounded-2xl p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white">Adicionar à Playlist</h3>
+                <button onclick="closeAddToPlaylistModal()" class="text-gray-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="select-playlist-list" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <!-- Lista de playlists para escolha -->
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed bottom-28 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Elemento de Áudio Oculto -->
+    <audio id="audio-player" class="hidden"></audio>
+
+    <!-- SCRIPT COMPLETO DA APLICAÇÃO -->
+    <script>
+        /* ==========================================================================
+           CONFIGURAÇÃO FIREBASE (EXCLUSIVA PARA LOGIN INTERNO E PLAYLISTS PÚBLICAS)
+           ========================================================================== */
+        const firebaseConfig = {
+            apiKey: "AIzaSyC3RCEDzstyHi1T3K0nXW6PxWFdRNTSQfs",
+            authDomain: "tocaai-46972.firebaseapp.com",
+            databaseURL: "https://tocaai-46972-default-rtdb.firebaseio.com",
+            projectId: "tocaai-46972",
+            storageBucket: "tocaai-46972.firebasestorage.app",
+            messagingSenderId: "454871432889",
+            appId: "1:454871432889:web:a67d91116fbd4bff31a568",
+            measurementId: "G-NPGF6H0WR6"
+        };
+
+        let db = null;
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            db = firebase.database();
+        } catch (err) {
+            console.error("Erro ao inicializar Firebase:", err);
+        }
+
+        /* ==========================================================================
+           ESTADO GLOBAL DO TOCAAÍ
+           ========================================================================== */
+        let state = {
+            currentUser: null,       // { username, displayName, bio, avatarBase64, isGuest }
+            authMode: 'login',       // 'login' | 'register'
+            tempAvatarBase64: null,  // Base64 da imagem carregada no upload
+            tracks: [],              // Lista master de faixas carregadas do IndexedDB
+            playlists: [],           // Playlists do usuário { id, name, description, isPublic, trackIds: [] }
+            publicPlaylists: [],     // Playlists públicas vindas do Firebase
+            currentTrackIndex: -1,
+            isPlaying: false,
+            isShuffle: false,
+            isRepeat: false,
+            activePlaylistId: null
+        };
+
+        const audio = document.getElementById('audio-player');
+
+        /* ==========================================================================
+           INDEXEDDB (ARMAZENAMENTO PERSISTENTE DAS MÚSICAS LOCAIS NO NAVEGADOR)
+           ========================================================================== */
+        const DB_NAME = 'TocaAiLocalMusicDB';
+        const DB_VERSION = 1;
+        const STORE_TRACKS = 'tracks';
+
+        function openMusicDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = (e) => {
+                    const idb = e.target.result;
+                    if (!idb.objectStoreNames.contains(STORE_TRACKS)) {
+                        idb.createObjectStore(STORE_TRACKS, { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = (e) => resolve(e.target.result);
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function saveTrackToIndexedDB(trackRecord) {
+            try {
+                const idb = await openMusicDB();
+                const tx = idb.transaction(STORE_TRACKS, 'readwrite');
+                tx.objectStore(STORE_TRACKS).put(trackRecord);
+                return new Promise((res) => { tx.oncomplete = () => res(true); });
+            } catch (err) {
+                console.error("Erro ao salvar faixa no IndexedDB:", err);
+            }
+        }
+
+        async function deleteTrackFromIndexedDB(trackId) {
+            try {
+                const idb = await openMusicDB();
+                const tx = idb.transaction(STORE_TRACKS, 'readwrite');
+                tx.objectStore(STORE_TRACKS).delete(trackId);
+            } catch (err) {
+                console.error("Erro ao deletar faixa no IndexedDB:", err);
+            }
+        }
+
+        async function loadAllTracksFromIndexedDB() {
+            try {
+                const idb = await openMusicDB();
+                const tx = idb.transaction(STORE_TRACKS, 'readonly');
+                const store = tx.objectStore(STORE_TRACKS);
+                return new Promise((resolve) => {
+                    const req = store.getAll();
+                    req.onsuccess = () => {
+                        const records = req.result || [];
+                        const hydrated = records.map(rec => ({
+                            id: rec.id,
+                            title: rec.title,
+                            artist: rec.artist,
+                            album: rec.album,
+                            coverUrl: rec.coverUrl,
+                            url: URL.createObjectURL(rec.blob)
+                        }));
+                        resolve(hydrated);
+                    };
+                    req.onerror = () => resolve([]);
+                });
+            } catch (err) {
+                return [];
+            }
+        }
+
+        /* ==========================================================================
+           INICIALIZAÇÃO DO APP
+           ========================================================================== */
+        window.addEventListener('DOMContentLoaded', async () => {
+            lucide.createIcons();
+            setupAudioEvents();
+            initVisualizer();
+
+            // Restaurar músicas salvas no IndexedDB
+            state.tracks = await loadAllTracksFromIndexedDB();
+            updateMusicCounter();
+            renderTracks();
+
+            // Verificar sessão salva
+            const savedSession = localStorage.getItem('tocaai_session');
+            if (savedSession) {
+                try {
+                    const parsed = JSON.parse(savedSession);
+                    if (parsed.isGuest) {
+                        enterAppAsUser(parsed);
+                    } else if (db && parsed.username) {
+                        const snap = await db.ref('users/' + parsed.username).once('value');
+                        if (snap.exists()) {
+                            const userData = snap.val();
+                            enterAppAsUser({
+                                username: parsed.username,
+                                displayName: userData.displayName || parsed.username,
+                                bio: userData.bio || '',
+                                avatarBase64: userData.avatarBase64 || null,
+                                isGuest: false
+                            });
+                        } else {
+                            document.getElementById('auth-screen').classList.remove('hidden');
+                        }
+                    }
+                } catch (e) {
+                    document.getElementById('auth-screen').classList.remove('hidden');
+                }
+            } else {
+                // Carrega preferências globais padrão caso ainda não tenha logado
+                loadUserCustomizations('guest');
+            }
+        });
+
+        /* ==========================================================================
+           SISTEMA DE AUTENTICAÇÃO INTERNA & UPLOAD DE IMAGEM DE PERFIL
+           ========================================================================== */
+        function switchAuthMode(mode) {
+            state.authMode = mode;
+            const isRegister = mode === 'register';
+
+            document.getElementById('tab-btn-login').className = isRegister
+                ? "py-2 rounded-lg text-sm font-semibold text-gray-400 hover:text-white transition-all"
+                : "py-2 rounded-lg text-sm font-bold bg-accent text-black transition-all";
+
+            document.getElementById('tab-btn-register').className = isRegister
+                ? "py-2 rounded-lg text-sm font-bold bg-accent text-black transition-all"
+                : "py-2 rounded-lg text-sm font-semibold text-gray-400 hover:text-white transition-all";
+
+            document.getElementById('register-avatar-section').classList.toggle('hidden', !isRegister);
+            document.getElementById('register-displayname-group').classList.toggle('hidden', !isRegister);
+            document.getElementById('register-bio-group').classList.toggle('hidden', !isRegister);
+            document.getElementById('auth-error-msg').classList.add('hidden');
+
+            document.getElementById('auth-submit-btn').innerHTML = isRegister
+                ? `<i data-lucide="user-plus" class="w-4 h-4"></i> Criar Conta no TocaAí`
+                : `<i data-lucide="log-in" class="w-4 h-4"></i> Entrar no TocaAí`;
+            lucide.createIcons();
+        }
+
+        // Processamento e redimensionamento de Upload de Imagem de Perfil (sem links externos)
+        function handleAvatarUpload(event, target) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                showToast("Por favor, selecione um arquivo de imagem válido.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Redimensionar para 160x160px quadrado centralizado para armazenamento leve e rápido
+                    const canvas = document.createElement('canvas');
+                    const size = 160;
+                    canvas.width = size;
+                    canvas.height = size;
+                    const ctx = canvas.getContext('2d');
+
+                    const minSide = Math.min(img.width, img.height);
+                    const sx = (img.width - minSide) / 2;
+                    const sy = (img.height - minSide) / 2;
+
+                    ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.82);
+
+                    state.tempAvatarBase64 = compressedBase64;
+
+                    if (target === 'register') {
+                        const prev = document.getElementById('register-avatar-preview');
+                        prev.src = compressedBase64;
+                        prev.classList.remove('hidden');
+                        document.getElementById('register-avatar-placeholder').classList.add('hidden');
+                    } else if (target === 'profile') {
+                        const prev = document.getElementById('profile-avatar-preview');
+                        prev.src = compressedBase64;
+                        prev.classList.remove('hidden');
+                        document.getElementById('profile-avatar-icon').classList.add('hidden');
+                    }
+                    showToast("Imagem carregada com sucesso!");
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function hashPassword(password) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password + "_tocaai_salt_2026");
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function sanitizeUsername(raw) {
+            return raw.toLowerCase().trim().replace(/[^a-z0-9_]/g, '');
+        }
+
+        async function handleAuthSubmit(event) {
+            event.preventDefault();
+            const errorBox = document.getElementById('auth-error-msg');
+            errorBox.classList.add('hidden');
+
+            const rawUser = document.getElementById('auth-username').value;
+            const username = sanitizeUsername(rawUser);
+            const password = document.getElementById('auth-password').value;
+
+            if (!username || username.length < 3) {
+                errorBox.innerText = "O usuário deve ter pelo menos 3 caracteres (letras, números ou _).";
+                errorBox.classList.remove('hidden');
+                return;
+            }
+            if (password.length < 4) {
+                errorBox.innerText = "A senha deve ter pelo menos 4 caracteres.";
+                errorBox.classList.remove('hidden');
+                return;
+            }
+            if (!db) {
+                errorBox.innerText = "Banco de dados indisponível no momento. Tente modo offline.";
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            const submitBtn = document.getElementById('auth-submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-70');
+
+            try {
+                const passwordHash = await hashPassword(password);
+                const userRef = db.ref('users/' + username);
+                const snapshot = await userRef.once('value');
+
+                if (state.authMode === 'register') {
+                    if (snapshot.exists()) {
+                        errorBox.innerText = "Este nome de usuário já está em uso. Escolha outro.";
+                        errorBox.classList.remove('hidden');
+                        return;
+                    }
+
+                    const displayName = document.getElementById('auth-displayname').value.trim() || username;
+                    const bio = document.getElementById('auth-bio').value.trim() || "Ouvindo no TocaAí 🎵";
+
+                    const newUser = {
+                        username,
+                        displayName,
+                        passwordHash,
+                        bio,
+                        avatarBase64: state.tempAvatarBase64 || null,
+                        createdAt: Date.now()
+                    };
+
+                    await userRef.set(newUser);
+                    showToast(`Conta @${username} criada com sucesso!`);
+                    enterAppAsUser({
+                        username,
+                        displayName,
+                        bio,
+                        avatarBase64: newUser.avatarBase64,
+                        isGuest: false
+                    });
+
+                } else {
+                    if (!snapshot.exists()) {
+                        errorBox.innerText = "Usuário não encontrado. Verifique ou crie uma conta.";
+                        errorBox.classList.remove('hidden');
+                        return;
+                    }
+
+                    const userData = snapshot.val();
+                    if (userData.passwordHash !== passwordHash) {
+                        errorBox.innerText = "Senha incorreta. Tente novamente.";
+                        errorBox.classList.remove('hidden');
+                        return;
+                    }
+
+                    showToast(`Bem-vindo de volta, ${userData.displayName}!`);
+                    enterAppAsUser({
+                        username,
+                        displayName: userData.displayName || username,
+                        bio: userData.bio || '',
+                        avatarBase64: userData.avatarBase64 || null,
+                        isGuest: false
+                    });
+                }
+            } catch (err) {
+                console.error(err);
+                errorBox.innerText = "Erro de conexão ao autenticar. Verifique sua internet.";
+                errorBox.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-70');
+            }
+        }
+
+        function continueAsGuest() {
+            enterAppAsUser({
+                username: 'guest',
+                displayName: 'Convidado',
+                bio: 'Modo Local Offline',
+                avatarBase64: null,
+                isGuest: true
+            });
+            showToast("Entrou no modo offline local.");
+        }
+
+        function enterAppAsUser(userObj) {
+            state.currentUser = userObj;
+            state.tempAvatarBase64 = null;
+            localStorage.setItem('tocaai_session', JSON.stringify(userObj));
+
+            document.getElementById('auth-screen').classList.add('hidden');
+            updateHeaderUserUI();
+
+            // Carregar edições visuais (cores/temas) salvas deste usuário
+            loadUserCustomizations(userObj.username);
+
+            // Carregar playlists locais deste usuário
+            loadUserPlaylists(userObj.username);
+            renderSidebarPlaylists();
+            renderPlaylistsGrid();
+
+            // Carregar playlists públicas da comunidade
+            fetchPublicPlaylists();
+        }
+
+        function updateHeaderUserUI() {
+            const u = state.currentUser;
+            if (!u) return;
+
+            document.getElementById('header-display-name').innerText = u.displayName;
+            document.getElementById('header-username').innerText = u.isGuest ? 'Offline' : `@${u.username}`;
+            document.getElementById('home-welcome-badge').innerText = u.isGuest ? 'Bem-vindo ao TocaAí' : `Olá, ${u.displayName}`;
+
+            const avatarImg = document.getElementById('header-avatar-img');
+            const avatarIcon = document.getElementById('header-avatar-icon');
+
+            if (u.avatarBase64) {
+                avatarImg.src = u.avatarBase64;
+                avatarImg.classList.remove('hidden');
+                avatarIcon.classList.add('hidden');
+            } else {
+                avatarImg.classList.add('hidden');
+                avatarIcon.classList.remove('hidden');
+            }
+        }
+
+        function openProfileModal() {
+            const u = state.currentUser;
+            if (!u) return;
+
+            const guestView = document.getElementById('profile-guest-view');
+            const editForm = document.getElementById('profile-edit-form');
+
+            if (u.isGuest) {
+                guestView.classList.remove('hidden');
+                editForm.classList.add('hidden');
+            } else {
+                guestView.classList.add('hidden');
+                editForm.classList.remove('hidden');
+
+                state.tempAvatarBase64 = u.avatarBase64 || null;
+                document.getElementById('profile-username-badge').innerText = `@${u.username}`;
+                document.getElementById('profile-displayname').value = u.displayName;
+                document.getElementById('profile-bio').value = u.bio || '';
+                document.getElementById('profile-new-password').value = '';
+
+                document.getElementById('stat-local-tracks').innerText = state.tracks.length;
+                document.getElementById('stat-total-playlists').innerText = state.playlists.length;
+                document.getElementById('stat-public-playlists').innerText = state.playlists.filter(p => p.isPublic).length;
+
+                const prev = document.getElementById('profile-avatar-preview');
+                const icon = document.getElementById('profile-avatar-icon');
+                if (u.avatarBase64) {
+                    prev.src = u.avatarBase64;
+                    prev.classList.remove('hidden');
+                    icon.classList.add('hidden');
+                } else {
+                    prev.classList.add('hidden');
+                    icon.classList.remove('hidden');
+                }
+            }
+
+            document.getElementById('profile-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profile-modal').classList.add('hidden');
+        }
+
+        async function saveUserProfile(event) {
+            event.preventDefault();
+            const u = state.currentUser;
+            if (!u || u.isGuest || !db) return;
+
+            const newDisplayName = document.getElementById('profile-displayname').value.trim() || u.username;
+            const newBio = document.getElementById('profile-bio').value.trim();
+            const newPassword = document.getElementById('profile-new-password').value;
+
+            const updates = {
+                displayName: newDisplayName,
+                bio: newBio,
+                avatarBase64: state.tempAvatarBase64
+            };
+
+            if (newPassword.length > 0) {
+                if (newPassword.length < 4) {
+                    showToast("A nova senha precisa ter pelo menos 4 caracteres.");
+                    return;
+                }
+                updates.passwordHash = await hashPassword(newPassword);
+            }
+
+            try {
+                await db.ref('users/' + u.username).update(updates);
+                state.currentUser = {
+                    ...u,
+                    displayName: newDisplayName,
+                    bio: newBio,
+                    avatarBase64: state.tempAvatarBase64
+                };
+                localStorage.setItem('tocaai_session', JSON.stringify(state.currentUser));
+                updateHeaderUserUI();
+
+                // Atualizar metadados do autor nas playlists públicas deste usuário
+                state.playlists.filter(p => p.isPublic).forEach(pl => syncPlaylistToFirebase(pl));
+
+                closeProfileModal();
+                showToast("Perfil atualizado com sucesso!");
+            } catch (err) {
+                showToast("Erro ao salvar perfil no servidor.");
+            }
+        }
+
+        function logoutUser() {
+            localStorage.removeItem('tocaai_session');
+            state.currentUser = null;
+            closeProfileModal();
+            document.getElementById('auth-screen').classList.remove('hidden');
+            showToast("Você saiu da sua conta.");
+        }
+
+        /* ==========================================================================
+           PERSISTÊNCIA DE EDIÇÕES DO USUÁRIO (CORES E TEMAS)
+           ========================================================================== */
+        function getCustomStorageKey(username) {
+            return `tocaai_prefs_${username || 'guest'}`;
+        }
+
+        function saveUserCustomizations() {
+            const username = state.currentUser ? state.currentUser.username : 'guest';
+            const prefs = {
+                theme: document.documentElement.getAttribute('data-theme') || 'default',
+                customAccent: document.documentElement.style.getPropertyValue('--color-accent') || '',
+                customBg: document.documentElement.style.getPropertyValue('--color-bg-base') || ''
+            };
+            localStorage.setItem(getCustomStorageKey(username), JSON.stringify(prefs));
+        }
+
+        function loadUserCustomizations(username) {
+            const raw = localStorage.getItem(getCustomStorageKey(username));
+            // Resetar estilos inline antes de aplicar
+            document.documentElement.style.removeProperty('--color-accent');
+            document.documentElement.style.removeProperty('--color-accent-hover');
+            document.documentElement.style.removeProperty('--color-bg-base');
+            document.documentElement.style.removeProperty('--color-bg-surface');
+            document.documentElement.style.removeProperty('--color-bg-card');
+
+            if (!raw) {
+                setTheme('default', false);
+                return;
+            }
+
+            try {
+                const prefs = JSON.parse(raw);
+                setTheme(prefs.theme || 'default', false);
+                if (prefs.customAccent) {
+                    setCustomAccent(prefs.customAccent, false);
+                    document.getElementById('accent-color-picker').value = prefs.customAccent;
+                }
+                if (prefs.customBg) {
+                    setCustomBgColor(prefs.customBg, false);
+                    document.getElementById('bg-color-picker').value = prefs.customBg;
+                }
+            } catch (e) {
+                setTheme('default', false);
+            }
+        }
+
+        function toggleThemePanel() {
+            document.getElementById('theme-panel').classList.toggle('translate-x-full');
+        }
+
+        function setTheme(themeName, save = true) {
+            const root = document.documentElement;
+            // Limpa cores customizadas inline ao trocar tema pronto
+            if (save) {
+                root.style.removeProperty('--color-accent');
+                root.style.removeProperty('--color-accent-hover');
+                root.style.removeProperty('--color-bg-base');
+                root.style.removeProperty('--color-bg-surface');
+                root.style.removeProperty('--color-bg-card');
+            }
+
+            if (themeName === 'default') {
+                root.removeAttribute('data-theme');
+            } else {
+                root.setAttribute('data-theme', themeName);
+            }
+
+            // Sincronizar inputs de cor com o tema ativo
+            setTimeout(() => {
+                const computedAccent = getComputedStyle(root).getPropertyValue('--color-accent').trim();
+                const computedBg = getComputedStyle(root).getPropertyValue('--color-bg-base').trim();
+                if (computedAccent.startsWith('#')) {
+                    document.getElementById('accent-color-picker').value = computedAccent;
+                    document.getElementById('color-hex-code').innerText = computedAccent;
+                }
+                if (computedBg.startsWith('#')) {
+                    document.getElementById('bg-color-picker').value = computedBg;
+                    document.getElementById('bg-hex-code').innerText = computedBg;
+                }
+            }, 20);
+
+            if (save) {
+                saveUserCustomizations();
+                showToast("Tema salvo nas suas preferências!");
+            }
+        }
+
+        function setCustomAccent(colorHex, save = true) {
+            document.documentElement.style.setProperty('--color-accent', colorHex);
+            document.documentElement.style.setProperty('--color-accent-hover', colorHex);
+            document.getElementById('color-hex-code').innerText = colorHex;
+            if (save) {
+                saveUserCustomizations();
+                showToast("Cor de destaque salva!");
+            }
+        }
+
+        function setCustomBgColor(bgHex, save = true) {
+            document.documentElement.style.setProperty('--color-bg-base', bgHex);
+            document.documentElement.style.setProperty('--color-bg-surface', adjustColorBrightness(bgHex, 10));
+            document.documentElement.style.setProperty('--color-bg-card', adjustColorBrightness(bgHex, 22));
+            document.getElementById('bg-hex-code').innerText = bgHex;
+            if (save) {
+                saveUserCustomizations();
+                showToast("Cor de fundo salva!");
+            }
+        }
+
+        function resetCustomColors() {
+            setTheme('default', true);
+            showToast("Cores restauradas para o padrão.");
+        }
+
+        function adjustColorBrightness(hex, amount) {
+            let col = hex.replace('#', '');
+            if (col.length === 3) col = col.split('').map(c => c + c).join('');
+            const num = parseInt(col, 16);
+            let r = Math.min(255, Math.max(0, (num >> 16) + amount));
+            let g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amount));
+            let b = Math.min(255, Math.max(0, (num & 0x0000FF) + amount));
+            return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+
+        /* ==========================================================================
+           IMPORTAÇÃO DE MÚSICAS LOCAIS & METADADOS (SALVANDO NO INDEXEDDB)
+           ========================================================================== */
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            if (files.length === 0) return;
+
+            let addedCount = 0;
+            files.forEach(file => {
+                if (!file.type.startsWith('audio/')) return;
+
+                const trackId = 'track_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                const fileUrl = URL.createObjectURL(file);
+
+                const track = {
+                    id: trackId,
+                    title: file.name.replace(/\.[^/.]+$/, ""),
+                    artist: "Artista Desconhecido",
+                    album: "Álbum Local",
+                    url: fileUrl,
+                    coverUrl: null
+                };
+
+                const persistTrack = () => {
+                    saveTrackToIndexedDB({
+                        id: track.id,
+                        title: track.title,
+                        artist: track.artist,
+                        album: track.album,
+                        coverUrl: track.coverUrl,
+                        blob: file
+                    });
+                };
+
+                if (window.jsmediatags) {
+                    window.jsmediatags.read(file, {
+                        onSuccess: function(tag) {
+                            const tags = tag.tags;
+                            if (tags.title) track.title = tags.title;
+                            if (tags.artist) track.artist = tags.artist;
+                            if (tags.album) track.album = tags.album;
+
+                            if (tags.picture) {
+                                const { data, format } = tags.picture;
+                                let base64String = "";
+                                for (let i = 0; i < data.length; i++) {
+                                    base64String += String.fromCharCode(data[i]);
+                                }
+                                track.coverUrl = `data:${format};base64,${btoa(base64String)}`;
+                            }
+                            persistTrack();
+                            renderTracks();
+                            if (state.currentTrackIndex !== -1) updatePlayerUI();
+                        },
+                        onError: function() {
+                            persistTrack();
+                        }
+                    });
+                } else {
+                    persistTrack();
+                }
+
+                state.tracks.push(track);
+                addedCount++;
+            });
+
+            showToast(`${addedCount} música(s) salva(s) no seu dispositivo!`);
+            updateMusicCounter();
+            renderTracks();
+            event.target.value = '';
+        }
+
+        function updateMusicCounter() {
+            document.getElementById('music-counter-badge').innerText = `${state.tracks.length} música(s)`;
+        }
+
+        /* ==========================================================================
+           CONTROLES DE ÁUDIO & ANIMAÇÃO DO VINIL
+           ========================================================================== */
+        function setupAudioEvents() {
+            audio.addEventListener('timeupdate', () => {
+                const current = audio.currentTime;
+                const duration = audio.duration || 0;
+                document.getElementById('current-time').innerText = formatTime(current);
+                document.getElementById('total-duration').innerText = formatTime(duration);
+                document.getElementById('progress-bar').value = duration ? (current / duration) * 100 : 0;
+            });
+
+            audio.addEventListener('ended', () => {
+                if (state.isRepeat) {
+                    audio.currentTime = 0;
+                    audio.play();
+                } else {
+                    playNextTrack();
+                }
+            });
+        }
+
+        function playTrack(index) {
+            if (index < 0 || index >= state.tracks.length) return;
+
+            state.currentTrackIndex = index;
+            const track = state.tracks[index];
+
+            audio.src = track.url;
+            audio.play().then(() => {
+                state.isPlaying = true;
+                updatePlayerUI();
+                renderLibraryTable();
+            }).catch(() => {
+                showToast("Erro ao tentar reproduzir faixa.");
+            });
+        }
+
+        function togglePlay() {
+            if (state.currentTrackIndex === -1 && state.tracks.length > 0) {
+                playTrack(0);
+                return;
+            }
+            if (state.currentTrackIndex === -1) {
+                showToast("Adicione músicas para reproduzir!");
+                return;
+            }
+
+            if (state.isPlaying) {
+                audio.pause();
+                state.isPlaying = false;
+            } else {
+                audio.play();
+                state.isPlaying = true;
+            }
+            updatePlayerUI();
+        }
+
+        function playNextTrack() {
+            if (state.tracks.length === 0) return;
+            if (state.isShuffle) {
+                playTrack(Math.floor(Math.random() * state.tracks.length));
+            } else {
+                playTrack((state.currentTrackIndex + 1) % state.tracks.length);
+            }
+        }
+
+        function playPrevTrack() {
+            if (state.tracks.length === 0) return;
+            playTrack((state.currentTrackIndex - 1 + state.tracks.length) % state.tracks.length);
+        }
+
+        function seekTrack(value) {
+            if (audio.duration) {
+                audio.currentTime = (value / 100) * audio.duration;
+            }
+        }
+
+        function changeVolume(val) {
+            audio.volume = val;
+            const volumeIcon = document.getElementById('volume-icon');
+            if (val == 0) volumeIcon.setAttribute('data-lucide', 'volume-x');
+            else if (val < 0.5) volumeIcon.setAttribute('data-lucide', 'volume-1');
+            else volumeIcon.setAttribute('data-lucide', 'volume-2');
+            lucide.createIcons();
+        }
+
+        function toggleMute() {
+            const volBar = document.getElementById('volume-bar');
+            if (audio.volume > 0) {
+                audio.volume = 0;
+                volBar.value = 0;
+            } else {
+                audio.volume = 0.8;
+                volBar.value = 0.8;
+            }
+            changeVolume(volBar.value);
+        }
+
+        function toggleShuffle() {
+            state.isShuffle = !state.isShuffle;
+            document.getElementById('btn-shuffle').classList.toggle('text-accent', state.isShuffle);
+            showToast(state.isShuffle ? "Modo aleatório ativado" : "Modo aleatório desativado");
+        }
+
+        function toggleRepeat() {
+            state.isRepeat = !state.isRepeat;
+            document.getElementById('btn-repeat').classList.toggle('text-accent', state.isRepeat);
+            showToast(state.isRepeat ? "Repetição ativada" : "Repetição desativada");
+        }
+
+        function playAllTracks() {
+            if (state.tracks.length > 0) playTrack(0);
+            else showToast("Sua biblioteca está vazia.");
+        }
+
+        function updatePlayerUI() {
+            const btn = document.getElementById('btn-play-pause');
+            const eqAnimation = document.getElementById('playing-eq');
+            const vinylWrapper = document.getElementById('hero-vinyl-wrapper');
+            const sonicRing = document.getElementById('hero-sonic-ring');
+            const heroPlayBtn = document.getElementById('hero-play-btn');
+            const heroStatus = document.getElementById('hero-playing-status');
+
+            if (state.isPlaying) {
+                btn.innerHTML = `<i data-lucide="pause" class="w-5 h-5 fill-current"></i>`;
+                heroPlayBtn.innerHTML = `<i data-lucide="pause" class="w-4 h-4 fill-current"></i> Pausar`;
+                heroStatus.innerText = "Tocando Agora • Ao Vivo";
+                eqAnimation.classList.remove('hidden');
+                eqAnimation.classList.add('flex');
+                vinylWrapper.classList.remove('vinyl-paused');
+                vinylWrapper.classList.add('vinyl-spinning');
+                sonicRing.classList.remove('hidden');
+            } else {
+                btn.innerHTML = `<i data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>`;
+                heroPlayBtn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-current"></i> Reproduzir`;
+                heroStatus.innerText = state.currentTrackIndex !== -1 ? "Pausado" : "Pronto para tocar";
+                eqAnimation.classList.add('hidden');
+                eqAnimation.classList.remove('flex');
+                vinylWrapper.classList.remove('vinyl-spinning');
+                vinylWrapper.classList.add('vinyl-paused');
+                sonicRing.classList.add('hidden');
+            }
+            lucide.createIcons();
+
+            if (state.currentTrackIndex !== -1) {
+                const track = state.tracks[state.currentTrackIndex];
+                document.getElementById('player-title').innerText = track.title;
+                document.getElementById('player-artist').innerText = track.artist;
+
+                const coverImg = document.getElementById('player-cover-img');
+                const placeholder = document.getElementById('player-cover-placeholder');
+                if (track.coverUrl) {
+                    coverImg.src = track.coverUrl;
+                    coverImg.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                } else {
+                    coverImg.classList.add('hidden');
+                    placeholder.classList.remove('hidden');
+                }
+
+                document.getElementById('hero-track-title').innerText = track.title;
+                document.getElementById('hero-track-artist').innerText = `${track.artist} • ${track.album}`;
+                const heroImg = document.getElementById('hero-cover-img');
+                const heroPlaceholder = document.getElementById('hero-cover-placeholder');
+                if (track.coverUrl) {
+                    heroImg.src = track.coverUrl;
+                    heroImg.classList.remove('hidden');
+                    heroPlaceholder.classList.add('hidden');
+                } else {
+                    heroImg.classList.add('hidden');
+                    heroPlaceholder.classList.remove('hidden');
+                }
+            }
+        }
+
+        /* ==========================================================================
+           NAVEGAÇÃO & RENDERIZAÇÃO DE MÚSICAS
+           ========================================================================== */
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('bg-white/10', 'text-white');
+                el.classList.add('text-gray-400');
+            });
+
+            const activeTab = document.getElementById(`tab-${tabId}`);
+            if (activeTab) {
+                activeTab.classList.remove('hidden');
+                // Reinicia animação fade-in-up ao trocar aba
+                activeTab.classList.remove('animate-fade-in-up');
+                void activeTab.offsetWidth;
+                activeTab.classList.add('animate-fade-in-up');
+            }
+
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if (activeNav) {
+                activeNav.classList.add('bg-white/10', 'text-white');
+                activeNav.classList.remove('text-gray-400');
+            }
+
+            if (tabId === 'explore') {
+                fetchPublicPlaylists();
+            }
+        }
+
+        function renderTracks() {
+            renderHomeRecentGrid();
+            renderLibraryTable();
+        }
+
+        function renderHomeRecentGrid() {
+            const grid = document.getElementById('recent-tracks-grid');
+            grid.innerHTML = '';
+
+            const recentTracks = state.tracks.slice(-5).reverse();
+            if (recentTracks.length === 0) {
+                grid.innerHTML = `<p class="col-span-full text-sm text-gray-500 italic">Nenhuma música salva ainda. Clique em "Importar Áudios" acima.</p>`;
+                return;
+            }
+
+            recentTracks.forEach((track, idx) => {
+                const originalIndex = state.tracks.findIndex(t => t.id === track.id);
+                const card = document.createElement('div');
+                card.style.animationDelay = `${idx * 0.06}s`;
+                card.className = "animate-fade-in-up bg-dark-card p-3 rounded-xl border border-white/5 hover:bg-white/10 hover:border-accent/30 hover:-translate-y-1 transition-all duration-300 group cursor-pointer flex flex-col justify-between shadow-md";
+                card.onclick = () => playTrack(originalIndex);
+
+                card.innerHTML = `
+                    <div class="w-full aspect-square bg-white/5 rounded-lg mb-3 overflow-hidden relative">
+                        ${track.coverUrl ? `<img src="${track.coverUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">` : 
+                        `<div class="w-full h-full flex items-center justify-center text-gray-500"><i data-lucide="music" class="w-8 h-8"></i></div>`}
+                        <button class="absolute bottom-2 right-2 w-10 h-10 rounded-full bg-accent text-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg translate-y-2 group-hover:translate-y-0">
+                            <i data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
+                        </button>
+                    </div>
+                    <h4 class="font-semibold text-sm text-white truncate">${track.title}</h4>
+                    <p class="text-xs text-gray-400 truncate">${track.artist}</p>
+                `;
+                grid.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function renderLibraryTable() {
+            const list = document.getElementById('library-tracks-list');
+            list.innerHTML = '';
+
+            if (state.tracks.length === 0) {
+                list.innerHTML = `<div class="p-8 text-center text-gray-500">Sua biblioteca está vazia. Clique em "Adicionar Músicas" para salvar faixas no seu navegador.</div>`;
+                return;
+            }
+
+            state.tracks.forEach((track, index) => {
+                const row = document.createElement('div');
+                row.className = "track-row grid grid-cols-12 items-center px-4 py-2.5 rounded-xl hover:bg-white/5 transition-colors group cursor-pointer text-sm";
+
+                row.innerHTML = `
+                    <div class="col-span-1 text-gray-400 font-mono text-xs flex items-center gap-2">
+                        <span class="group-hover:hidden">${index + 1}</span>
+                        <button onclick="playTrack(${index})" class="hidden group-hover:block text-accent">
+                            <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                        </button>
+                    </div>
+                    <div class="col-span-6 md:col-span-5 flex items-center gap-3 overflow-hidden">
+                        <div class="w-9 h-9 rounded-lg bg-white/5 flex-shrink-0 overflow-hidden">
+                            ${track.coverUrl ? `<img src="${track.coverUrl}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-gray-500"><i data-lucide="music" class="w-4 h-4"></i></div>`}
+                        </div>
+                        <div class="truncate">
+                            <div class="font-medium text-white truncate ${state.currentTrackIndex === index ? 'text-accent font-bold' : ''}">${track.title}</div>
+                            <div class="text-xs text-gray-400 md:hidden truncate">${track.artist}</div>
+                        </div>
+                    </div>
+                    <div class="hidden md:block md:col-span-4 text-gray-400 truncate text-xs">${track.artist} • ${track.album}</div>
+                    <div class="col-span-5 md:col-span-2 flex items-center justify-end gap-2">
+                        <button onclick="openAddToPlaylistModal(event, '${track.id}')" class="p-1.5 rounded-full hover:bg-white/10 text-gray-400 hover:text-white" title="Adicionar à Playlist">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="deleteTrack(event, ${index})" class="p-1.5 rounded-full hover:bg-red-500/20 text-gray-400 hover:text-red-400" title="Remover Faixa">
+                            <i data-lucide="trash" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `;
+                row.onclick = (e) => {
+                    if (!e.target.closest('button')) playTrack(index);
+                };
+                list.appendChild(row);
+            });
+            lucide.createIcons();
+        }
+
+        /* ==========================================================================
+           GERENCIAMENTO DE PLAYLISTS (PRIVADAS + SINCRONIZAÇÃO PÚBLICA FIREBASE)
+           ========================================================================== */
+        function getPlaylistsStorageKey(username) {
+            return `tocaai_playlists_${username || 'guest'}`;
+        }
+
+        function saveUserPlaylists() {
+            const username = state.currentUser ? state.currentUser.username : 'guest';
+            localStorage.setItem(getPlaylistsStorageKey(username), JSON.stringify(state.playlists));
+        }
+
+        function loadUserPlaylists(username) {
+            const raw = localStorage.getItem(getPlaylistsStorageKey(username));
+            if (raw) {
+                try {
+                    state.playlists = JSON.parse(raw);
+                } catch (e) {
+                    state.playlists = [];
+                }
+            } else {
+                state.playlists = [];
+            }
+        }
+
+        function openCreatePlaylistModal() {
+            document.getElementById('new-playlist-name').value = '';
+            document.getElementById('new-playlist-desc').value = '';
+            document.getElementById('new-playlist-public').checked = false;
+            document.getElementById('create-playlist-modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('new-playlist-name').focus(), 50);
+        }
+
+        function closeCreatePlaylistModal() {
+            document.getElementById('create-playlist-modal').classList.add('hidden');
+        }
+
+        async function confirmCreatePlaylist() {
+            const name = document.getElementById('new-playlist-name').value.trim();
+            const description = document.getElementById('new-playlist-desc').value.trim();
+            const isPublic = document.getElementById('new-playlist-public').checked;
+
+            if (!name) {
+                showToast("Digite um nome para a playlist.");
+                return;
+            }
+
+            if (isPublic && (!state.currentUser || state.currentUser.isGuest)) {
+                showToast("Faça login com uma conta interna para publicar playlists!");
+                return;
+            }
+
+            const newPlaylist = {
+                id: 'pl_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                name,
+                description,
+                isPublic,
+                trackIds: [],
+                likes: 0
+            };
+
+            state.playlists.push(newPlaylist);
+            saveUserPlaylists();
+            renderSidebarPlaylists();
+            renderPlaylistsGrid();
+            closeCreatePlaylistModal();
+
+            if (isPublic) {
+                await syncPlaylistToFirebase(newPlaylist);
+                showToast(`Playlist pública "${name}" criada e compartilhada!`);
+            } else {
+                showToast(`Playlist "${name}" criada!`);
+            }
+        }
+
+        async function syncPlaylistToFirebase(playlist) {
+            if (!db || !state.currentUser || state.currentUser.isGuest) return;
+            const ref = db.ref('public_playlists/' + playlist.id);
+
+            if (!playlist.isPublic) {
+                await ref.remove();
+                return;
+            }
+
+            // Monta resumo das faixas para outros usuários visualizarem na comunidade
+            const trackSummaries = playlist.trackIds
+                .map(id => state.tracks.find(t => t.id === id))
+                .filter(Boolean)
+                .map(t => ({ title: t.title, artist: t.artist }));
+
+            await ref.set({
+                id: playlist.id,
+                name: playlist.name,
+                description: playlist.description || '',
+                ownerUsername: state.currentUser.username,
+                ownerDisplayName: state.currentUser.displayName,
+                ownerAvatar: state.currentUser.avatarBase64 || null,
+                trackCount: trackSummaries.length,
+                tracks: trackSummaries,
+                likes: playlist.likes || 0,
+                updatedAt: Date.now()
+            });
+        }
+
+        async function fetchPublicPlaylists() {
+            const grid = document.getElementById('public-playlists-grid');
+            if (!db) {
+                grid.innerHTML = `<p class="col-span-full text-sm text-gray-500">Conecte-se à internet para explorar playlists públicas.</p>`;
+                return;
+            }
+
+            grid.innerHTML = `<div class="col-span-full text-center py-8 text-gray-400 text-sm">Carregando playlists da comunidade...</div>`;
+
+            try {
+                const snap = await db.ref('public_playlists').orderByChild('updatedAt').limitToLast(30).once('value');
+                const items = [];
+                snap.forEach(child => {
+                    items.push(child.val());
+                });
+                items.reverse();
+                state.publicPlaylists = items;
+                renderPublicPlaylistsGrid();
+            } catch (err) {
+                grid.innerHTML = `<div class="col-span-full text-center py-8 text-red-400 text-sm">Erro ao carregar playlists públicas.</div>`;
+            }
+        }
+
+        function renderPublicPlaylistsGrid() {
+            const grid = document.getElementById('public-playlists-grid');
+            grid.innerHTML = '';
+
+            if (state.publicPlaylists.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500 text-sm">Nenhuma playlist pública compartilhada ainda. Seja o primeiro a publicar uma!</div>`;
+                return;
+            }
+
+            state.publicPlaylists.forEach((pl, idx) => {
+                const card = document.createElement('div');
+                card.style.animationDelay = `${idx * 0.05}s`;
+                card.className = "animate-fade-in-up bg-dark-card rounded-2xl p-5 border border-white/10 hover:border-accent/40 transition-all flex flex-col justify-between space-y-4 shadow-lg";
+
+                const tracksListHtml = (pl.tracks && pl.tracks.length > 0)
+                    ? pl.tracks.slice(0, 4).map((t, i) => `
+                        <div class="flex items-center justify-between text-xs py-1 border-b border-white/5 last:border-0">
+                            <span class="text-gray-200 truncate pr-2">${i + 1}. ${t.title}</span>
+                            <span class="text-gray-500 text-[11px] truncate max-w-[90px]">${t.artist}</span>
+                        </div>
+                    `).join('')
+                    : `<p class="text-xs text-gray-500 italic py-2">Lista sem faixas detalhadas ainda</p>`;
+
+                card.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2.5 overflow-hidden">
+                                <div class="w-9 h-9 rounded-full bg-accent/20 border border-accent/40 overflow-hidden flex items-center justify-center flex-shrink-0">
+                                    ${pl.ownerAvatar ? `<img src="${pl.ownerAvatar}" class="w-full h-full object-cover">` : `<i data-lucide="user" class="w-4 h-4 text-accent"></i>`}
+                                </div>
+                                <div class="overflow-hidden">
+                                    <div class="text-xs font-bold text-white truncate">${pl.ownerDisplayName || pl.ownerUsername}</div>
+                                    <div class="text-[10px] text-accent truncate">@${pl.ownerUsername}</div>
+                                </div>
+                            </div>
+                            <span class="text-[11px] bg-white/5 px-2.5 py-1 rounded-full text-gray-300 font-medium flex-shrink-0">
+                                ${pl.trackCount || 0} faixas
+                            </span>
+                        </div>
+
+                        <div>
+                            <h4 class="font-extrabold text-base text-white truncate">${pl.name}</h4>
+                            ${pl.description ? `<p class="text-xs text-gray-400 line-clamp-2 mt-0.5">${pl.description}</p>` : ''}
+                        </div>
+
+                        <div class="bg-black/25 rounded-xl p-3 border border-white/5">
+                            ${tracksListHtml}
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2 border-t border-white/10">
+                        <button onclick="likePublicPlaylist('${pl.id}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-accent/20 text-xs font-semibold text-gray-200 hover:text-accent transition-colors">
+                            <i data-lucide="heart" class="w-3.5 h-3.5 text-accent"></i>
+                            <span>${pl.likes || 0} Curtidas</span>
+                        </button>
+                        <button onclick="clonePublicPlaylist('${pl.id}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent text-black text-xs font-bold hover:bg-accent-hover transition-colors">
+                            <i data-lucide="copy-plus" class="w-3.5 h-3.5"></i> Salvar Cópia
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        async function likePublicPlaylist(playlistId) {
+            if (!db) return;
+            const ref = db.ref('public_playlists/' + playlistId + '/likes');
+            await ref.transaction(current => (current || 0) + 1);
+            showToast("Você curtiu esta playlist!");
+            fetchPublicPlaylists();
+        }
+
+        function clonePublicPlaylist(playlistId) {
+            const pub = state.publicPlaylists.find(p => p.id === playlistId);
+            if (!pub) return;
+
+            // Tenta vincular músicas locais que tenham o mesmo título
+            const matchedTrackIds = [];
+            if (pub.tracks) {
+                pub.tracks.forEach(pt => {
+                    const found = state.tracks.find(lt => lt.title.toLowerCase() === pt.title.toLowerCase());
+                    if (found) matchedTrackIds.push(found.id);
+                });
+            }
+
+            const cloned = {
+                id: 'pl_' + Date.now(),
+                name: `${pub.name} (de @${pub.ownerUsername})`,
+                description: pub.description || '',
+                isPublic: false,
+                trackIds: matchedTrackIds,
+                likes: 0
+            };
+
+            state.playlists.push(cloned);
+            saveUserPlaylists();
+            renderSidebarPlaylists();
+            renderPlaylistsGrid();
+            showToast(`Playlist salva na sua coleção (${matchedTrackIds.length} faixa(s) local(is) vinculada(s))!`);
+        }
+
+        function renderSidebarPlaylists() {
+            const container = document.getElementById('sidebar-playlists-list');
+            container.innerHTML = '';
+
+            state.playlists.forEach(pl => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left px-2 py-1.5 text-xs text-gray-400 hover:text-white truncate rounded-lg hover:bg-white/5 transition-colors flex items-center justify-between group";
+                btn.onclick = () => openPlaylistDetail(pl.id);
+                btn.innerHTML = `
+                    <span class="truncate flex items-center gap-1.5">
+                        ${pl.isPublic ? '<i data-lucide="globe" class="w-3 h-3 text-accent flex-shrink-0"></i>' : '<i data-lucide="lock" class="w-3 h-3 text-gray-500 flex-shrink-0"></i>'}
+                        <span class="truncate">${pl.name}</span>
+                    </span>
+                    <span class="text-[10px] text-gray-500 group-hover:text-gray-400">${pl.trackIds.length}</span>
+                `;
+                container.appendChild(btn);
+            });
+            lucide.createIcons();
+        }
+
+        function renderPlaylistsGrid() {
+            const grid = document.getElementById('playlists-grid');
+            grid.innerHTML = '';
+
+            if (state.playlists.length === 0) {
+                grid.innerHTML = `<p class="col-span-full text-sm text-gray-500 italic">Nenhuma playlist criada ainda.</p>`;
+                return;
+            }
+
+            state.playlists.forEach(pl => {
+                const card = document.createElement('div');
+                card.className = "bg-dark-card p-4 rounded-2xl border border-white/5 hover:bg-white/10 hover:border-accent/30 transition-all cursor-pointer space-y-3 group relative";
+                card.onclick = () => openPlaylistDetail(pl.id);
+
+                card.innerHTML = `
+                    <div class="w-full aspect-square bg-accent/10 border border-accent/20 rounded-xl flex items-center justify-center text-accent shadow-inner relative">
+                        <i data-lucide="list-music" class="w-10 h-10"></i>
+                        <span class="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${pl.isPublic ? 'bg-accent text-black' : 'bg-black/60 text-gray-300'}">
+                            ${pl.isPublic ? 'Pública' : 'Privada'}
+                        </span>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-white text-base truncate">${pl.name}</h4>
+                        <p class="text-xs text-gray-400">${pl.trackIds.length} faixa(s)</p>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function openPlaylistDetail(playlistId) {
+            const playlist = state.playlists.find(p => p.id === playlistId);
+            if (!playlist) return;
+
+            state.activePlaylistId = playlistId;
+            document.getElementById('playlist-detail-name').innerText = playlist.name;
+            document.getElementById('playlist-detail-count').innerText = `${playlist.trackIds.length} música(s)${playlist.description ? ' • ' + playlist.description : ''}`;
+
+            const badge = document.getElementById('playlist-detail-visibility-badge');
+            badge.innerText = playlist.isPublic ? 'Pública na Comunidade' : 'Privada';
+            badge.className = playlist.isPublic
+                ? "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-accent/20 text-accent border border-accent/30"
+                : "text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-white/10 text-gray-300";
+
+            const togglePubBtn = document.getElementById('toggle-public-playlist-btn');
+            togglePubBtn.querySelector('span').innerText = playlist.isPublic ? 'Tornar Privada' : 'Publicar na Comunidade';
+            togglePubBtn.onclick = () => togglePlaylistVisibility(playlistId);
+
+            document.getElementById('play-playlist-btn').onclick = () => playPlaylist(playlistId);
+            document.getElementById('delete-playlist-btn').onclick = () => confirmDeletePlaylist(playlistId);
+
+            renderPlaylistTracksList(playlist);
+            switchTab('playlist-detail');
+        }
+
+        async function togglePlaylistVisibility(playlistId) {
+            const playlist = state.playlists.find(p => p.id === playlistId);
+            if (!playlist) return;
+
+            if (!playlist.isPublic && (!state.currentUser || state.currentUser.isGuest)) {
+                showToast("Entre com uma conta interna para publicar playlists!");
+                return;
+            }
+
+            playlist.isPublic = !playlist.isPublic;
+            saveUserPlaylists();
+            await syncPlaylistToFirebase(playlist);
+            renderSidebarPlaylists();
+            renderPlaylistsGrid();
+            openPlaylistDetail(playlistId);
+            showToast(playlist.isPublic ? "Playlist publicada na aba Explorar!" : "Playlist agora é privada.");
+        }
+
+        function renderPlaylistTracksList(playlist) {
+            const list = document.getElementById('playlist-tracks-list');
+            list.innerHTML = '';
+
+            const playlistTracks = state.tracks.filter(t => playlist.trackIds.includes(t.id));
+
+            if (playlistTracks.length === 0) {
+                list.innerHTML = `<p class="text-center text-gray-500 py-8">Esta playlist está vazia. Adicione faixas pelo botão "+" na sua Biblioteca.</p>`;
+                return;
+            }
+
+            playlistTracks.forEach((track, idx) => {
+                const originalIndex = state.tracks.findIndex(t => t.id === track.id);
+                const row = document.createElement('div');
+                row.className = "track-row flex items-center justify-between px-4 py-2.5 rounded-xl hover:bg-white/5 transition-colors group text-sm";
+                row.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <span class="text-xs text-gray-500 font-mono w-4">${idx + 1}</span>
+                        <div class="truncate">
+                            <div class="font-medium text-white truncate">${track.title}</div>
+                            <div class="text-xs text-gray-400 truncate">${track.artist}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="playTrack(${originalIndex})" class="p-1.5 rounded-full text-accent hover:scale-110 transition-transform">
+                            <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                        </button>
+                        <button onclick="removeFromPlaylist('${playlist.id}', '${track.id}')" class="p-1.5 rounded-full text-gray-400 hover:text-red-400" title="Remover da Playlist">
+                            <i data-lucide="minus-circle" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `;
+                list.appendChild(row);
+            });
+            lucide.createIcons();
+        }
+
+        function playPlaylist(playlistId) {
+            const playlist = state.playlists.find(p => p.id === playlistId);
+            if (!playlist || playlist.trackIds.length === 0) {
+                showToast("Esta playlist não contém faixas.");
+                return;
+            }
+            const firstTrackIdx = state.tracks.findIndex(t => t.id === playlist.trackIds[0]);
+            if (firstTrackIdx !== -1) playTrack(firstTrackIdx);
+        }
+
+        function openAddToPlaylistModal(event, trackId) {
+            event.stopPropagation();
+            const container = document.getElementById('select-playlist-list');
+            container.innerHTML = '';
+
+            if (state.playlists.length === 0) {
+                container.innerHTML = `<p class="text-xs text-gray-400 text-center py-2">Crie uma playlist primeiro!</p>`;
+            } else {
+                state.playlists.forEach(pl => {
+                    const btn = document.createElement('button');
+                    btn.className = "w-full text-left px-3 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-sm text-white flex justify-between items-center transition-colors";
+                    btn.onclick = () => addTrackToPlaylist(pl.id, trackId);
+                    btn.innerHTML = `
+                        <span class="truncate">${pl.name}</span>
+                        <i data-lucide="plus" class="w-4 h-4 text-accent flex-shrink-0"></i>
+                    `;
+                    container.appendChild(btn);
+                });
+                lucide.createIcons();
+            }
+
+            document.getElementById('add-to-playlist-modal').classList.remove('hidden');
+        }
+
+        function closeAddToPlaylistModal() {
+            document.getElementById('add-to-playlist-modal').classList.add('hidden');
+        }
+
+        async function addTrackToPlaylist(playlistId, trackId) {
+            const playlist = state.playlists.find(p => p.id === playlistId);
+            if (playlist) {
+                if (!playlist.trackIds.includes(trackId)) {
+                    playlist.trackIds.push(trackId);
+                    saveUserPlaylists();
+                    if (playlist.isPublic) await syncPlaylistToFirebase(playlist);
+                    renderSidebarPlaylists();
+                    renderPlaylistsGrid();
+                    showToast(`Adicionada à playlist "${playlist.name}"!`);
+                } else {
+                    showToast("Música já está nesta playlist.");
+                }
+            }
+            closeAddToPlaylistModal();
+        }
+
+        async function removeFromPlaylist(playlistId, trackId) {
+            const playlist = state.playlists.find(p => p.id === playlistId);
+            if (playlist) {
+                playlist.trackIds = playlist.trackIds.filter(id => id !== trackId);
+                saveUserPlaylists();
+                if (playlist.isPublic) await syncPlaylistToFirebase(playlist);
+                renderSidebarPlaylists();
+                renderPlaylistTracksList(playlist);
+                showToast("Faixa removida da playlist.");
+            }
+        }
+
+        function confirmDeletePlaylist(playlistId) {
+            const playlist = state.playlists.find(p => p.id === playlistId);
+            if (!playlist) return;
+
+            showModal({
+                title: "Excluir Playlist",
+                description: `Tem certeza que deseja excluir a playlist "${playlist.name}"?`,
+                onConfirm: async () => {
+                    if (playlist.isPublic && db) {
+                        await db.ref('public_playlists/' + playlist.id).remove();
+                    }
+                    state.playlists = state.playlists.filter(p => p.id !== playlistId);
+                    saveUserPlaylists();
+                    renderSidebarPlaylists();
+                    renderPlaylistsGrid();
+                    switchTab('playlists');
+                    showToast("Playlist excluída com sucesso.");
+                }
+            });
+        }
+
+        function deleteTrack(event, index) {
+            event.stopPropagation();
+            showModal({
+                title: "Remover Música",
+                description: "Deseja remover esta faixa salva do seu dispositivo?",
+                onConfirm: async () => {
+                    const track = state.tracks[index];
+                    await deleteTrackFromIndexedDB(track.id);
+
+                    for (const pl of state.playlists) {
+                        if (pl.trackIds.includes(track.id)) {
+                            pl.trackIds = pl.trackIds.filter(id => id !== track.id);
+                            if (pl.isPublic) await syncPlaylistToFirebase(pl);
+                        }
+                    }
+
+                    state.tracks.splice(index, 1);
+                    if (state.currentTrackIndex === index) {
+                        audio.pause();
+                        state.isPlaying = false;
+                        state.currentTrackIndex = -1;
+                        updatePlayerUI();
+                    }
+                    saveUserPlaylists();
+                    updateMusicCounter();
+                    renderTracks();
+                    renderSidebarPlaylists();
+                    showToast("Música removida.");
+                }
+            });
+        }
+
+        /* ==========================================================================
+           SISTEMA DE BUSCA
+           ========================================================================== */
+        function handleSearch(query) {
+            const q = query.toLowerCase().trim();
+            if (!q) {
+                renderTracks();
+                return;
+            }
+
+            const list = document.getElementById('library-tracks-list');
+            list.innerHTML = '';
+
+            const filtered = state.tracks.filter(t =>
+                t.title.toLowerCase().includes(q) ||
+                t.artist.toLowerCase().includes(q) ||
+                t.album.toLowerCase().includes(q)
+            );
+
+            if (filtered.length === 0) {
+                list.innerHTML = `<div class="p-8 text-center text-gray-500">Nenhum resultado encontrado para "${query}".</div>`;
+                switchTab('library');
+                return;
+            }
+
+            filtered.forEach((track) => {
+                const realIndex = state.tracks.findIndex(t => t.id === track.id);
+                const row = document.createElement('div');
+                row.className = "track-row grid grid-cols-12 items-center px-4 py-2.5 rounded-xl hover:bg-white/5 transition-colors group cursor-pointer text-sm";
+                row.innerHTML = `
+                    <div class="col-span-1 text-accent font-mono text-xs">●</div>
+                    <div class="col-span-6 md:col-span-5 flex items-center gap-3 truncate">
+                        <div class="font-medium text-white truncate">${track.title}</div>
+                    </div>
+                    <div class="hidden md:block md:col-span-4 text-gray-400 truncate text-xs">${track.artist}</div>
+                    <div class="col-span-5 md:col-span-2 text-right">
+                        <button onclick="playTrack(${realIndex})" class="px-3 py-1 bg-accent text-black font-bold text-xs rounded-full">Tocar</button>
+                    </div>
+                `;
+                list.appendChild(row);
+            });
+            switchTab('library');
+        }
+
+        /* ==========================================================================
+           MODAIS CUSTOMIZADOS & TOASTS
+           ========================================================================== */
+        function showModal({ title, description, onConfirm }) {
+            const modal = document.getElementById('custom-modal');
+            const modalContent = modal.querySelector('div');
+
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-description').innerText = description;
+
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+            confirmBtn.onclick = () => {
+                if (onConfirm) onConfirm();
+                closeModal();
+            };
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('custom-modal');
+            const modalContent = modal.querySelector('div');
+            modal.classList.add('opacity-0');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = "bg-dark-card border border-white/10 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 text-sm transition-all duration-300 transform translate-y-4 opacity-0 pointer-events-auto";
+            toast.innerHTML = `
+                <i data-lucide="sparkles" class="w-4 h-4 text-accent flex-shrink-0"></i>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        /* ==========================================================================
+           VISUALIZADOR CANVAS DINÂMICO (BARRAS DE ESPECTRO + ONDAS DUPLAS)
+           ========================================================================== */
+        function initVisualizer() {
+            const canvas = document.getElementById('hero-visualizer');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            function resize() {
+                canvas.width = canvas.parentElement.clientWidth;
+                canvas.height = canvas.parentElement.clientHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            let phase = 0;
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const accent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#1db954';
+                const height = canvas.height;
+                const width = canvas.width;
+
+                // Barras de espectro suaves no fundo
+                const barCount = 24;
+                const barWidth = (width / barCount) * 0.55;
+                const step = width / barCount;
+                ctx.fillStyle = accent;
+                ctx.globalAlpha = state.isPlaying ? 0.28 : 0.12;
+
+                for (let i = 0; i < barCount; i++) {
+                    const amp = state.isPlaying
+                        ? (Math.sin(i * 0.45 + phase * 1.4) * 0.5 + 0.5) * (height * 0.65) + 8
+                        : (Math.sin(i * 0.4 + phase) * 0.5 + 0.5) * (height * 0.22) + 6;
+                    const x = i * step + (step - barWidth) / 2;
+                    const y = (height - amp) / 2;
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, barWidth, amp, 4);
+                    ctx.fill();
+                }
+
+                // Onda senoidal principal
+                ctx.globalAlpha = 0.95;
+                ctx.beginPath();
+                ctx.lineWidth = 2.5;
+                ctx.strokeStyle = accent;
+
+                for (let x = 0; x < width; x++) {
+                    const amplitude = state.isPlaying ? 22 : 9;
+                    const y = Math.sin(x * 0.025 + phase) * amplitude + height / 2;
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                // Segunda onda harmônica
+                ctx.globalAlpha = 0.4;
+                ctx.beginPath();
+                ctx.lineWidth = 1.5;
+                for (let x = 0; x < width; x++) {
+                    const amplitude = state.isPlaying ? 15 : 6;
+                    const y = Math.cos(x * 0.035 - phase * 1.2) * amplitude + height / 2;
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+
+                phase += state.isPlaying ? 0.09 : 0.025;
+                requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return "0:00";
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+    </script>
+</body>
+</html>
